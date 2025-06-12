@@ -9,7 +9,7 @@ const GoogleCalendar = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
 
   // Google Calendar API設定
-  const CLIENT_ID = 'YOUR_CLIENT_ID_HERE'; // あなたのクライアントIDに置き換えてください
+  const CLIENT_ID = '1027626902064-0rrb11dpqggdll279lrco2ru1746ptka.apps.googleusercontent.com'; 
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
   const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
@@ -207,7 +207,7 @@ const GoogleCalendar = () => {
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">Googleカレンダーに接続</h3>
             <p className="text-gray-500">
-              ログインして直近1ヶ月の予定を表示しましょう
+              ログインして直近1ヶ月の予定を表示
             </p>
           </div>
         )}
@@ -287,19 +287,6 @@ const GoogleCalendar = () => {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {!isSignedIn && (
-          <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h4 className="font-medium text-yellow-800 mb-2">セットアップが必要です</h4>
-            <ol className="text-sm text-yellow-700 space-y-1">
-              <li>1. Google Cloud Consoleでプロジェクトを作成</li>
-              <li>2. Calendar APIを有効化</li>
-              <li>3. OAuth 2.0クライアントIDを作成（Webアプリケーション用）</li>
-              <li>4. 上記のCLIENT_IDを置き換え</li>
-              <li>5. 承認済みJavaScriptオリジンにドメインを追加</li>
-            </ol>
           </div>
         )}
       </div>
