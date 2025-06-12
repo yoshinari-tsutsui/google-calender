@@ -11,7 +11,8 @@ const GoogleCalendar = () => {
   // Google Calendar API設定
   const CLIENT_ID = '1027626902064-0rrb11dpqggdll279lrco2ru1746ptka.apps.googleusercontent.com'; 
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+  // 読み取り専用スコープに変更
+  const SCOPES = 'https://www.googleapis.com/auth/calendar';
 
   const [gapi, setGapi] = useState(null);
   const [gisLoaded, setGisLoaded] = useState(false);
@@ -37,7 +38,7 @@ const GoogleCalendar = () => {
       setGisLoaded(true);
     } catch (err) {
       setError('Google APIの初期化に失敗しました');
-      console.error(err);
+      console.error('初期化エラー:', err);
     }
   };
 
@@ -56,11 +57,18 @@ const GoogleCalendar = () => {
   };
 
   const initializeGapiClient = async () => {
-    if (gapi) {
-      await gapi.client.init({
-        discoveryDocs: [DISCOVERY_DOC],
-      });
-      setIsSignedIn(false);
+    if (window.gapi) {
+      try {
+        await window.gapi.client.init({
+          apiKey: '', // API Keyは不要ですが、初期化には必要な場合があります
+          discoveryDocs: [DISCOVERY_DOC],
+        });
+        console.log('GAPI client初期化完了');
+        setIsSignedIn(false);
+      } catch (error) {
+        console.error('GAPI client初期化エラー:', error);
+        setError('Google APIクライアントの初期化に失敗しました');
+      }
     }
   };
 
@@ -73,14 +81,28 @@ const GoogleCalendar = () => {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
-      callback: (tokenResponse) => {
+      callback: async (tokenResponse) => {
         if (tokenResponse.error !== undefined) {
-          setError('認証に失敗しました');
+          setError(`認証に失敗しました: ${tokenResponse.error}`);
+          console.error('認証エラー:', tokenResponse);
           return;
         }
-        setIsSignedIn(true);
-        setError('');
-        fetchMonthEvents();
+        console.log('認証成功:', tokenResponse);
+        
+        // アクセストークンを設定
+        window.gapi.client.setToken({ access_token: tokenResponse.access_token });
+        
+        // Calendar APIクライアントを再初期化
+        try {
+          await window.gapi.client.load('calendar', 'v3');
+          console.log('Calendar APIロード完了');
+          setIsSignedIn(true);
+          setError('');
+          fetchMonthEvents();
+        } catch (error) {
+          console.error('Calendar APIロードエラー:', error);
+          setError('Calendar APIの初期化に失敗しました');
+        }
       },
     });
 
@@ -88,11 +110,11 @@ const GoogleCalendar = () => {
   };
 
   const handleSignoutClick = () => {
-    if (gapi) {
-      const token = gapi.client.getToken();
+    if (window.gapi) {
+      const token = window.gapi.client.getToken();
       if (token !== null) {
         window.google.accounts.oauth2.revoke(token.access_token);
-        gapi.client.setToken('');
+        window.gapi.client.setToken('');
         setIsSignedIn(false);
         setEvents([]);
       }
@@ -100,30 +122,58 @@ const GoogleCalendar = () => {
   };
 
   const fetchMonthEvents = async () => {
-    if (!gapi) return;
+    if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
+      setError('Google Calendar APIが初期化されていません');
+      console.error('GAPI状態:', {
+        gapi: !!window.gapi,
+        client: !!window.gapi?.client,
+        calendar: !!window.gapi?.client?.calendar
+      });
+      return;
+    }
     
     setLoading(true);
     setError('');
 
     try {
+      console.log('Calendar API呼び出しを開始...');
+      
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-      const response = await gapi.client.calendar.events.list({
+      console.log('取得期間:', startOfMonth.toISOString(), 'から', endOfMonth.toISOString());
+
+      const response = await window.gapi.client.calendar.events.list({
         calendarId: 'primary',
         timeMin: startOfMonth.toISOString(),
         timeMax: endOfMonth.toISOString(),
         singleEvents: true,
         orderBy: 'startTime',
-        maxResults: 100, // 最大100件まで取得
+        maxResults: 100,
       });
 
+      console.log('API応答:', response);
+      
       const items = response.result.items || [];
+      console.log('取得した予定数:', items.length);
       setEvents(items);
+      
+      if (items.length === 0) {
+        console.log('今月の予定はありません');
+      }
     } catch (err) {
-      setError('予定の取得に失敗しました');
-      console.error(err);
+      console.error('Calendar API エラー:', err);
+      console.error('エラー詳細:', err.result?.error);
+      
+      if (err.result?.error?.code === 403) {
+        setError('Google Calendar APIへのアクセス権限がありません。Google Cloud ConsoleでCalendar APIが有効になっていることを確認してください。');
+      } else if (err.result?.error?.code === 401) {
+        setError('認証が無効です。再度ログインしてください。');
+        setIsSignedIn(false);
+      } else {
+        setError(`予定の取得に失敗しました: ${err.result?.error?.message || err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -163,7 +213,7 @@ const GoogleCalendar = () => {
           <div className="flex items-center space-x-3">
             <Calendar className="h-8 w-8 text-blue-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">直近1ヶ月の予定</h1>
+              <h1 className="text-2xl font-bold text-gray-800">今月の予定</h1>
               <p className="text-gray-600">{today}</p>
             </div>
           </div>
@@ -207,7 +257,7 @@ const GoogleCalendar = () => {
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">Googleカレンダーに接続</h3>
             <p className="text-gray-500">
-              ログインして直近1ヶ月の予定を表示
+              ログインして今月の予定を表示
             </p>
           </div>
         )}
@@ -215,7 +265,7 @@ const GoogleCalendar = () => {
         {isSignedIn && !loading && events.length === 0 && !error && (
           <div className="text-center py-12">
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 mb-2">直近1ヶ月の予定はありません</h3>
+            <h3 className="text-lg font-medium text-gray-700 mb-2">今月の予定はありません</h3>
             <p className="text-gray-500">
               予定がない期間ですね
             </p>
@@ -232,7 +282,7 @@ const GoogleCalendar = () => {
         {events.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              直近1ヶ月の予定 ({events.length}件)
+              今月の予定 ({events.length}件)
             </h2>
             {events.map((event, index) => (
               <div
