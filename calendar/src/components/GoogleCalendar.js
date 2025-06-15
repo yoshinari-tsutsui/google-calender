@@ -9,10 +9,9 @@ const GoogleCalendar = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
 
   // Google Calendar API設定
-  const CLIENT_ID = '1027626902064-0rrb11dpqggdll279lrco2ru1746ptka.apps.googleusercontent.com'; 
+  const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  // 読み取り専用スコープに変更
-  const SCOPES = 'https://www.googleapis.com/auth/calendar';
+  const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
   const [gapi, setGapi] = useState(null);
   const [gisLoaded, setGisLoaded] = useState(false);
