@@ -9,7 +9,7 @@ const GoogleCalendar = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
 
   // Google Calendar API設定
-  const CLIENT_ID = '1027626902064-0rrb11dpqggdll279lrco2ru1746ptka.apps.googleusercontent.com'; 
+  const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
   // 読み取り専用スコープに変更
   const SCOPES = 'https://www.googleapis.com/auth/calendar';
@@ -18,8 +18,13 @@ const GoogleCalendar = () => {
   const [gisLoaded, setGisLoaded] = useState(false);
 
   useEffect(() => {
+    // CLIENT_IDが設定されているかチェック
+    if (!CLIENT_ID) {
+      setError('CLIENT_IDが設定されていません。.envファイルにREACT_APP_GOOGLE_CLIENT_IDを設定してください。');
+      return;
+    }
     initializeGapi();
-  }, []);
+  }, [CLIENT_ID]);
 
   const initializeGapi = async () => {
     if (typeof window === 'undefined') return;
@@ -205,6 +210,35 @@ const GoogleCalendar = () => {
     day: 'numeric',
     weekday: 'long'
   });
+
+  // CLIENT_IDが設定されていない場合のエラー表示
+  if (!CLIENT_ID) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="text-center py-12">
+            <AlertCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-700 mb-2">設定エラー</h3>
+            <p className="text-red-600 mb-4">
+              CLIENT_IDが設定されていません。
+            </p>
+            <div className="text-left bg-gray-50 p-4 rounded-lg text-sm">
+              <p className="font-medium mb-2">設定手順:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>プロジェクトルートに<code>.env</code>ファイルを作成</li>
+                <li>以下を追加:<br/>
+                  <code className="bg-gray-200 px-2 py-1 rounded">
+                    REACT_APP_GOOGLE_CLIENT_ID=your_client_id_here
+                  </code>
+                </li>
+                <li>アプリケーションを再起動</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
