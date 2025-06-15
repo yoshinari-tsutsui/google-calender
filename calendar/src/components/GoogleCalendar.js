@@ -11,8 +11,7 @@ const GoogleCalendar = () => {
   // Google Calendar API設定
   const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  // 読み取り専用スコープに変更
-  const SCOPES = 'https://www.googleapis.com/auth/calendar';
+  const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
   const [gapi, setGapi] = useState(null);
   const [gisLoaded, setGisLoaded] = useState(false);
